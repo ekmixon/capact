@@ -19,7 +19,6 @@ class UndefinedDict:
             return UndefinedDict(".".join([self.parent, attr]), val)
         else:
             raise AttributeError()
-            return UndefinedDict(".".join([self.parent, attr]), None)
 
     def __str__(self):
         return str(self.data)
@@ -49,10 +48,10 @@ class List(list):
 class Dict(dict):
     # __init__ converts all nested dictionaries {} to the Dict
     def __init__(self, *args, **kwargs):
-        if len(kwargs) > 0:
+        if kwargs:
             raise Exception("Dict does not support kwargs")
 
-        if len(args) == 0:
+        if not args:
             return super().__init__()
 
         if len(args) > 1:
@@ -82,7 +81,7 @@ def random_string(letters: str = "", length: int = 10) -> str:
     If no letters were provided it is using all printable letters
     except whitespaces and quotes.
     """
-    if len(letters) == 0:
+    if not letters:
         # all printable except whitespaces and quotes
         printable = set(string.printable)
         whitespace = set(string.whitespace)
@@ -117,7 +116,7 @@ def random_password(
         pwlist += [random.choice(_punctuation)]
 
     to_fill = length - numbers - lowercase - uppercase - special
-    pwlist += [random.choice(chars) for i in range(to_fill)]
+    pwlist += [random.choice(chars) for _ in range(to_fill)]
 
     random.shuffle(pwlist)
     return "".join(pwlist)

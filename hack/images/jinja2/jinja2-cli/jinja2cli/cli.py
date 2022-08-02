@@ -31,9 +31,7 @@ else:
 def force_text(data):
     if isinstance(data, text_type):
         return data
-    if isinstance(data, bytes_type):
-        return data.decode("utf8")
-    return data
+    return data.decode("utf8") if isinstance(data, bytes_type) else data
 
 
 class InvalidDataFormat(Exception):
@@ -228,11 +226,7 @@ def render(template_path, data, extensions, filters=None, strict=False):
         variable_end_string="@>",
     )
 
-    if strict:
-        env.undefined = StrictUndefined
-    else:
-        env.undefined = capact.Undefined
-
+    env.undefined = StrictUndefined if strict else capact.Undefined
     # Add environ global
     env.globals["environ"] = lambda key: force_text(os.environ.get(key))
     env.globals["get_context"] = lambda: data
@@ -277,7 +271,7 @@ def cli(opts, args, config):  # noqa: C901
                 fn, except_exc, raise_exc = get_format(format)
             except InvalidDataFormat:
                 if format in ("yml", "yaml"):
-                    raise InvalidDataFormat("%s: install pyyaml to fix" % format)
+                    raise InvalidDataFormat(f"{format}: install pyyaml to fix")
                 if format == "toml":
                     raise InvalidDataFormat("toml: install toml to fix")
                 if format == "xml":
@@ -286,33 +280,29 @@ def cli(opts, args, config):  # noqa: C901
             try:
                 data = fn(data) or {}
             except except_exc:
-                raise raise_exc(u"%s ..." % data[:60])
+                raise raise_exc(f"{data[:60]} ...")
         else:
             data = {}
 
-        parsed_data.update(data)
+        parsed_data |= data
 
     extensions = []
     for ext in opts.extensions:
         # Allow shorthand and assume if it's not a module
         # path, it's probably trying to use builtin from jinja2
         if "." not in ext:
-            ext = "jinja2.ext." + ext
+            ext = f"jinja2.ext.{ext}"
         extensions.append(ext)
 
     parsed_data.update(parse_kv_string(opts.D or []))
 
-    if opts.outfile is None:
-        out = sys.stdout
-    else:
-        out = open(opts.outfile, "w")
-
+    out = sys.stdout if opts.outfile is None else open(opts.outfile, "w")
     if not PY3:
         import codecs
 
         out = codecs.getwriter("utf8")(out)
 
-    if config.get("prefix") is not None and len(parsed_data) != 0:
+    if config.get("prefix") is not None and parsed_data:
         parsed_data = {config["prefix"]: parsed_data}
 
     template_path = os.path.abspath(template_path)
@@ -370,9 +360,7 @@ def read_configuration(config_path):
     load, _, _ = _load_yaml()
     with open(config_path) as config_file:
         config = load(config_file.read())
-        if config is None:
-            return {}
-        return config
+        return {} if config is None else config
 
 
 def main():
@@ -381,12 +369,12 @@ def main():
     )
     parser.add_option(
         "--format",
-        help=lambda: "format of input variables: %s"
-        % ", ".join(sorted(list(get_available_formats()))),
+        help=lambda: f'format of input variables: {", ".join(sorted(list(get_available_formats())))}',
         dest="format",
         action="store",
         default="auto",
     )
+
     parser.add_option(
         "-e",
         "--extension",
